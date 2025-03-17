@@ -7,11 +7,15 @@ Set-ItemProperty -Path "HKCU:\Software\Microsoft\GameBar" -Name "ShowStartupPane
 # Lista de aplicativos que serão mantidos e não desinstalados (whitelist)
 [regex]$WhitelistedApps = 'Microsoft.WindowsStore|Microsoft.GetHelp|Microsoft.Windows.Photos|Microsoft.WindowsCalculator|Microsoft.ScreenSketch|Microsoft.WindowsSoundRecorder|Microsoft.DesktopAppInstaller|Microsoft.WindowsCamera|NVIDIACorp.NVIDIAControlPanel|Microsoft.Paint|Microsoft.MicrosoftEdge.Stable|Microsoft.WindowsNotepad|Microsoft.XboxIdentityProvider|Microsoft.ZuneMusic|MicrosoftCorporationII.QuickAssist|WinRAR.ShellExtension|Microsoft.WindowsTerminal|Microsoft.VP9VideoExtensions|Microsoft.HEVCVideoExtension|Microsoft.WebMediaExtensions'
 
-# Obtém a lista de pacotes de aplicativos instalados em todos os usuários e remove os pacotes que não correspondem aos aplicativos listados em $WhitelistedApps:
- Get-AppxPackage -AllUsers | Where-Object {$_.Name -NotMatch $WhitelistedApps} | Remove-AppxPackage | out-Null
+# Obtém a lista de pacotes de aplicativos instalados e remove os não listados
+Get-AppxPackage -AllUsers | Where-Object {$_.Name -NotMatch $WhitelistedApps} | ForEach-Object { 
+    Remove-AppxPackage -Package $_.PackageFullName -ErrorAction SilentlyContinue
+}
 
-# Obtém a lista de pacotes Online instalados em todos os usuários e remove os pacotes que não correspondem aos aplicativos listados em $WhitelistedApps:
- Get-AppxProvisionedPackage -Online | Where-Object {$_.PackageName -NotMatch $WhitelistedApps} | Remove-AppxProvisionedPackage -Online | out-Null
+# Remove pacotes provisionados que não estão na whitelist
+Get-AppxProvisionedPackage -Online | Where-Object {$_.PackageName -NotMatch $WhitelistedApps} | ForEach-Object {
+    Remove-AppxProvisionedPackage -Online -PackageName $_.PackageName -ErrorAction SilentlyContinue
+}
 
 Write-Host "Processo concluído com sucesso."
 
