@@ -276,19 +276,20 @@ $Button3.Add_Click( {
 $Button4.Add_Click( {
     Write-Host "`n`n=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#"
     Write-Host "`n                        Ativar modo de Desempenho`n`n"
-
+        Write-Host "Descomprimindo memoria!" -ForegroundColor Cyan
+        Disable-MMAgent -mc
         Write-Host "Instalando WinRAR" -ForegroundColor Cyan
-        winget install WinRAR --silent --accept-source-agreements
+        winget install --id RARLab.WinRar --silent --accept-package-agreements --accept-source-agreements
 
         
         powercfg -SetActive SCHEME_MIN
 
-        powercfg -change -standby-timeout-ac 60
-        powercfg -change -standby-timeout-dc 15
-        powercfg -change -monitor-timeout-ac 15
-        powercfg -change -monitor-timeout-dc 10
-        powercfg -change -disk-timeout-ac 0
-        powercfg -change -disk-timeout-dc 120
+        powercfg -change -standby-timeout-ac 120  # Mudar o tempo limite de espera para 120 minutos quando estiver conectado à energia
+        powercfg -change -standby-timeout-dc 15  # Mudar o tempo limite de espera para 15 minutos quando estiver usando bateria
+        powercfg -change -monitor-timeout-ac 15  # Mudar o tempo limite do monitor para 15 minutos quando estiver conectado à energia
+        powercfg -change -monitor-timeout-dc 10  # Mudar o tempo limite do monitor para 10 minutos quando estiver usando bateria
+        powercfg -change -disk-timeout-ac 0      # Nunca desligar o disco rígido quando estiver conectado à energia
+        powercfg -change -disk-timeout-dc 120    # Mudar o tempo limite do disco rígido para 120 minutos quando estiver usando bateria
 
         Write-Host "Ativar o Sensor de Armazenamento" -ForegroundColor Cyan
         New-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy" -Name "01" -Value 1 -PropertyType DWORD -Force
@@ -302,6 +303,21 @@ $Button4.Add_Click( {
         Write-Host "Ocultar a Visão de Tarefas" -ForegroundColor Cyan
         Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "ShowTaskViewButton" -Value 0
 
+        Write-Host "Desativar Prefetch e Superfetch/SysMain (Otimizando para SSD)" -ForegroundColor Cyan
+        Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" -Name "EnablePrefetcher" -Value 0 -Type DWord
+        Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager\Memory Management\PrefetchParameters" -Name "EnableSuperfetch" -Value 0 -Type DWord
+        Stop-Service "SysMain" -ErrorAction SilentlyContinue
+        Set-Service "SysMain" -StartupType Disabled -ErrorAction SilentlyContinue
+
+        Write-Host "Desativando Widgets (Win11)" -ForegroundColor Cyan
+        Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarDa" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+
+        Write-Host "Desativando Chat (Win11)" -ForegroundColor Cyan
+        Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarMn" -Value 0 -Type DWord -ErrorAction SilentlyContinue
+
+        Write-Host "Desativando sugestões de aplicativos" -ForegroundColor Cyan
+        Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SubscribedContent-338388Enabled" -Value 0 -Type DWord
+
         Write-Host "Ativar Finalizar tarefa na barra de tarefas" -ForegroundColor Cyan
         New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarDeveloperSettings" -Force | Out-Null
         New-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarDeveloperSettings" -Name "TaskbarEndTask" -Value 1 -PropertyType DWORD -Force
@@ -311,6 +327,12 @@ $Button4.Add_Click( {
 
         Write-Host "Alterar o layout do Menu Iniciar para priorizar aplicativos fixados" -ForegroundColor Cyan
         Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name Start_Layout -Value 1
+
+        Write-Host "Desativando anúncios na tela de bloqueio" -ForegroundColor Cyan
+        If (!(Test-Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent")) {
+            New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Force
+        }
+        Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent" -Name "DisableWindowsSpotlightFeatures" -Value 1 -Type DWord
         
         Write-Host "Ativando modo 'Desempenho Máximo' de Energia!" -ForegroundColor Cyan
         powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61
