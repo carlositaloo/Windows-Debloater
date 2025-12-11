@@ -138,13 +138,6 @@ $Button1.Add_Click( {
 
     Write-Host "Aplicativos desnecessarios desinstalados!`n" -ForegroundColor Yellow
 
-    # Desativa a hibernação do sistema:
-    Write-Host "Desativando Hibernação" -ForegroundColor Cyan
-    powercfg.exe /hibernate off
-    Start-Sleep 3
-    Write-Host "Espaço em disco liberado!"
-    Write-Host "Hibernação Desativada!" -ForegroundColor Yellow
-
     Write-Host "`n`n=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#`n`n"
 })
 
@@ -276,20 +269,18 @@ $Button3.Add_Click( {
 $Button4.Add_Click( {
     Write-Host "`n`n=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#"
     Write-Host "`n                        Ativar modo de Desempenho`n`n"
+        # Desativar a compressão de memória:
         Write-Host "Descomprimindo memoria!" -ForegroundColor Cyan
         Disable-MMAgent -mc
+
+        # Desativa a hibernação do sistema:
+        Write-Host "Desativando Hibernação" -ForegroundColor Cyan
+        powercfg.exe /hibernate off
+        Start-Sleep 3
+        Write-Host "Hibernação Desativada!" -ForegroundColor Yellow
+        
         Write-Host "Instalando WinRAR" -ForegroundColor Cyan
         winget install --id RARLab.WinRar --silent --accept-package-agreements --accept-source-agreements
-
-        
-        powercfg -SetActive SCHEME_MIN
-
-        powercfg -change -standby-timeout-ac 120  # Mudar o tempo limite de espera para 120 minutos quando estiver conectado à energia
-        powercfg -change -standby-timeout-dc 15  # Mudar o tempo limite de espera para 15 minutos quando estiver usando bateria
-        powercfg -change -monitor-timeout-ac 15  # Mudar o tempo limite do monitor para 15 minutos quando estiver conectado à energia
-        powercfg -change -monitor-timeout-dc 10  # Mudar o tempo limite do monitor para 10 minutos quando estiver usando bateria
-        powercfg -change -disk-timeout-ac 0      # Nunca desligar o disco rígido quando estiver conectado à energia
-        powercfg -change -disk-timeout-dc 120    # Mudar o tempo limite do disco rígido para 120 minutos quando estiver usando bateria
 
         Write-Host "Ativar o Sensor de Armazenamento" -ForegroundColor Cyan
         New-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy" -Name "01" -Value 1 -PropertyType DWORD -Force
