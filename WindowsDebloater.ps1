@@ -8,12 +8,19 @@
 # Verifica se o script está sendo executado como administrador
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     # Se não estiver sendo executado como administrador, relança o script como administrador
-    Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+    if ($PSCommandPath) {
+        # Rodando de um arquivo .ps1
+        Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`"" -Verb RunAs
+    } else {
+        # Rodando via iex (sem arquivo): baixa o script de novo na janela de Administrador
+        $ScriptUrl = 'https://raw.githubusercontent.com/carlositaloo/Windows-Debloater/main/WindowsDebloater.ps1'
+        Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"iex ([System.Text.Encoding]::UTF8.GetString((New-Object System.Net.WebClient).DownloadData('$ScriptUrl')))`"" -Verb RunAs
+    }
     exit
 }
 
 # Baixa um script que cria um ponto de restauração
-Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/carlositaloo/Formata-o-Windows/main/WindowsDebloater/RestorePoint.ps1'))`"" -WindowStyle Hidden -NoNewWindow -Wait *>$null
+Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"iex ((New-Object System.Net.WebClient).DownloadString('https://raw.githubusercontent.com/carlositaloo/Windows-Debloater/main/restorePoint.ps1'))`"" -WindowStyle Hidden -Wait
 
 Write-Host " "
 Write-Host "=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#"
@@ -170,14 +177,13 @@ $Button2.Add_Click( {
         Else {
             Write-Host "A pasta OneDrive não existe ou não há arquivos encontrados na pasta. Continuando com a remoção do OneDrive." -ForegroundColor Green
             Start-Sleep 1
-            Write-Host "Habilitando a Política de Grupo 'Impedir o uso do OneDrive para Armazenamento de Arquivos'." -ForegroundColor Green
-            $OneDriveKey = 'HKLM:Software\Policies\Microsoft\Windows\OneDrive'
-            If (!(Test-Path $OneDriveKey)) {
-                Mkdir $OneDriveKey
-                Set-ItemProperty $OneDriveKey -Name OneDrive -Value DisableFileSyncNGSC
-            }
-            Set-ItemProperty $OneDriveKey -Name OneDrive -Value DisableFileSyncNGSC
         }
+
+        # Roda nos dois casos (com ou sem arquivos)
+        Write-Host "Habilitando a Política de Grupo 'Impedir o uso do OneDrive para Armazenamento de Arquivos'." -ForegroundColor Green
+        $OneDriveKey = 'HKLM:\Software\Policies\Microsoft\Windows\OneDrive'
+        New-Item -Path $OneDriveKey -Force | Out-Null
+        Set-ItemProperty -Path $OneDriveKey -Name DisableFileSyncNGSC -Value 1 -Type DWord
 
         Write-Host "Desinstalando o OneDrive. Por favor, aguarde..." -ForegroundColor Green
 
@@ -300,6 +306,37 @@ $Button4.Add_Click( {
         Stop-Service "SysMain" -ErrorAction SilentlyContinue
         Set-Service "SysMain" -StartupType Disabled -ErrorAction SilentlyContinue
 
+        Write-Host "Colocando a Busca do Windows em manual" -ForegroundColor Cyan
+        Stop-Service "WSearch" -Force -ErrorAction SilentlyContinue
+        Set-Service "WSearch" -StartupType Manual -ErrorAction SilentlyContinue
+
+        Write-Host "Impedindo o Edge de abrir sozinho ao ligar o PC" -ForegroundColor Cyan
+        $RunKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+        (Get-Item $RunKey).Property | Where-Object { $_ -like "MicrosoftEdgeAutoLaunch*" } | ForEach-Object {
+            Remove-ItemProperty -Path $RunKey -Name $_ -ErrorAction SilentlyContinue
+        }
+        $EdgeKey = "HKLM:\SOFTWARE\Policies\Microsoft\Edge"
+        New-Item -Path $EdgeKey -Force | Out-Null
+        Set-ItemProperty -Path $EdgeKey -Name StartupBoostEnabled -Value 0 -Type DWord
+
+        Write-Host "Desativando a precisão do mouse (aceleração)" -ForegroundColor Cyan
+        Set-ItemProperty -Path "HKCU:\Control Panel\Mouse" -Name MouseSpeed -Value "0"
+        Set-ItemProperty -Path "HKCU:\Control Panel\Mouse" -Name MouseThreshold1 -Value "0"
+        Set-ItemProperty -Path "HKCU:\Control Panel\Mouse" -Name MouseThreshold2 -Value "0"
+
+        Write-Host "Desativando a gravação do Game Bar" -ForegroundColor Cyan
+        New-Item -Path "HKCU:\System\GameConfigStore" -Force | Out-Null
+        Set-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name GameDVR_Enabled -Value 0 -Type DWord
+        New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\GameDVR" -Force | Out-Null
+        Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\GameDVR" -Name AppCaptureEnabled -Value 0 -Type DWord
+
+        Write-Host "Trocando o DNS para Cloudflare (1.1.1.1) + Google (8.8.8.8)" -ForegroundColor Cyan
+        # Só nas placas de rede físicas que estão conectadas
+        Get-NetAdapter -Physical | Where-Object { $_.Status -eq "Up" } | ForEach-Object {
+            Set-DnsClientServerAddress -InterfaceIndex $_.ifIndex -ServerAddresses ("1.1.1.1", "8.8.8.8")
+        }
+        Clear-DnsClientCache
+
         Write-Host "Desativando Widgets (Win11)" -ForegroundColor Cyan
         Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name "TaskbarDa" -Value 0 -Type DWord -ErrorAction SilentlyContinue
 
@@ -332,34 +369,21 @@ $Button4.Add_Click( {
         # powercfg /setactive e9a42b02-d5df-448d-aa00-03f14749eb61 
         # Start-Sleep 1
 
-        $WVersion = [System.Environment]::OSVersion.Version.Build
-        if ($WVersion -ge 19000 -and $WVersion -lt 19999) {
-            Write-Host "Desativando Busca na Web no menu iniciar" -ForegroundColor Cyan
+        # Desativa a busca na Web (Bing) no Menu Iniciar - Windows 10 e 11
+        Write-Host "Desativando Busca na Web no menu iniciar" -ForegroundColor Cyan
 
-            $SearchKey = "HKCU\Software\Microsoft\Windows\CurrentVersion\Search"
-            $ExplorerKey = "HKCU\Software\Policies\Microsoft\Windows\Explorer"
-            # Cria a chave do Registro definida na variável
-            New-Item -Path $SearchKey -Force | Out-Null
-            New-Item -Path $ExplorerKey -Force | Out-Null
+        $SearchKeyPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Search"
+        $ExplorerKeyPath = "HKCU:\Software\Policies\Microsoft\Windows\Explorer"
 
-            $SearchKeyPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Search"
-            $ExplorerKeyPath = "HKCU:\Software\Policies\Microsoft\Windows\Explorer"
-        
-            # Verifica se a propriedade BingSearchEnabled não existe ou possui valor diferente de 0
-            if ((Get-ItemProperty -Path $SearchKeyPath).BingSearchEnabled -ne 0) {
-                New-ItemProperty -Path $SearchKeyPath -Name BingSearchEnabled -PropertyType DWord -Value 0
-            }
-            
-            # Verifica se a propriedade CortanaConsent não existe ou possui valor diferente de 0
-            if ((Get-ItemProperty -Path $SearchKeyPath).CortanaConsent -ne 0) {
-                New-ItemProperty -Path $SearchKeyPath -Name CortanaConsent -PropertyType DWord -Value 0
-            }
-            
-            # Verifica se a propriedade DisableSearchBoxSuggestions não existe ou possui valor diferente de 1
-            if ((Get-ItemProperty -Path $ExplorerKeyPath).DisableSearchBoxSuggestions -ne 1) {
-                New-ItemProperty -Path $ExplorerKeyPath -Name DisableSearchBoxSuggestions -PropertyType DWord -Value 1
-            }
-        }   
+        # Cria as chaves se não existirem
+        New-Item -Path $SearchKeyPath -Force | Out-Null
+        New-Item -Path $ExplorerKeyPath -Force | Out-Null
+
+        # -Force cria o valor ou sobrescreve se já existir
+        New-ItemProperty -Path $SearchKeyPath -Name BingSearchEnabled -PropertyType DWord -Value 0 -Force | Out-Null
+        New-ItemProperty -Path $SearchKeyPath -Name CortanaConsent -PropertyType DWord -Value 0 -Force | Out-Null
+        # Essa é a que funciona no Windows 11
+        New-ItemProperty -Path $ExplorerKeyPath -Name DisableSearchBoxSuggestions -PropertyType DWord -Value 1 -Force | Out-Null
         
         Write-Host "Aumenta o limite de tamanho para endereços de diretórios" -ForegroundColor Cyan
         Set-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name "LongPathsEnabled" -Value 1 -Type DWORD
@@ -387,9 +411,10 @@ $Button5.Add_Click( {
 
         Write-Host "Desativando a Telemetria" -ForegroundColor Cyan
         Write-Host "Desativando o programa de experiência de comentários do Windows" -ForegroundColor Green
-        $Advertising = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo"
-        If (Test-Path $Advertising) {
-            Set-ItemProperty $Advertising Enabled -Value 0 
+        # Cria a chave se não existir e desliga o ID de anúncio
+        foreach ($Advertising in @("HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo", "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo")) {
+            New-Item -Path $Advertising -Force | Out-Null
+            Set-ItemProperty -Path $Advertising -Name Enabled -Value 0 -Type DWord
         }
 
         #Impede que a experiência de comentários do Windows envie dados anônimos
@@ -431,14 +456,10 @@ $Button5.Add_Click( {
         $DataCollection1 = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\DataCollection"
         $DataCollection2 = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\DataCollection"
         $DataCollection3 = "HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Policies\DataCollection"    
-        If (Test-Path $DataCollection1) {
-            Set-ItemProperty $DataCollection1  AllowTelemetry -Value 0 
-        }
-        If (Test-Path $DataCollection2) {
-            Set-ItemProperty $DataCollection2  AllowTelemetry -Value 0 
-        }
-        If (Test-Path $DataCollection3) {
-            Set-ItemProperty $DataCollection3  AllowTelemetry -Value 0 
+        # Cria a chave se não existir e depois define o valor
+        foreach ($DataCollection in @($DataCollection1, $DataCollection2, $DataCollection3)) {
+            New-Item -Path $DataCollection -Force | Out-Null
+            Set-ItemProperty -Path $DataCollection -Name AllowTelemetry -Value 0 -Type DWord
         }
 
         #Desativando o rastreamento de localização
@@ -463,6 +484,22 @@ $Button5.Add_Click( {
         Write-Host "Parando e desativando o serviço de rastreamento de diagnóstico" -ForegroundColor Green
         Stop-Service "DiagTrack"
         Set-Service "DiagTrack" -StartupType Disabled
+
+        #Desativa o Histórico de atividades (lista do que você abre no PC)
+        Write-Host "Desativando o Histórico de atividades" -ForegroundColor Green
+        $ActivityKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System"
+        New-Item -Path $ActivityKey -Force | Out-Null
+        Set-ItemProperty -Path $ActivityKey -Name EnableActivityFeed -Value 0 -Type DWord
+        Set-ItemProperty -Path $ActivityKey -Name PublishUserActivities -Value 0 -Type DWord
+        Set-ItemProperty -Path $ActivityKey -Name UploadUserActivities -Value 0 -Type DWord
+
+        #Desativa o Copilot
+        Write-Host "Desativando o Copilot" -ForegroundColor Green
+        $CopilotKey = "HKCU:\Software\Policies\Microsoft\Windows\WindowsCopilot"
+        New-Item -Path $CopilotKey -Force | Out-Null
+        Set-ItemProperty -Path $CopilotKey -Name TurnOffWindowsCopilot -Value 1 -Type DWord
+        Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name ShowCopilotButton -Value 0 -Type DWord
+
         Write-Host "A telemetria foi desativada!" -ForegroundColor Yellow
 
         Write-Host "`n`n=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#`n`n"

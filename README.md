@@ -9,7 +9,7 @@
     Limpeza do windows após Formatação
     <br/>
     <br/>
-    <a href="https://github.com/carlositaloo/Formata-o-Windows/tree/main/WindowsDebloater"><strong>Explore the docs »</strong></a>
+    <a href="https://github.com/carlositaloo/Windows-Debloater"><strong>Explore the docs »</strong></a>
     <br/>
     <a href="https://microsoft.com/PowerShell" target="_blank"><img src="https://img.shields.io/badge/PowerShell-1f425f?logo=Powershell" target="_blank" align="center"></a>
     &nbsp;
@@ -54,7 +54,6 @@ Botão "Desinstalar APPS Desnecessários":
 - Inicia a desinstalação de aplicativos desnecessários.  
 - Abre um novo PowerShell e executa um comando para desinstalar os aplicativos desnecessários do Windows Store.  
 - Aguarda até que o PowerShell seja fechado.  
-- Desativa a hibernação do sistema para liberar espaço em disco.  
 
 <details>
 <summary>Saber mais:</summary>
@@ -65,27 +64,20 @@ Essa opção permite remover todos os aplicativos pré-instalados que vêm com o
 - Microsoft.Windows.Photos (Visualizador de fotos do Windows)
 - Microsoft.WindowsCalculator (Calculadora do Windows)
 - Microsoft.ScreenSketch (Ferramenta de Captura e Esboço)
-- Microsoft.WindowsSoundRecorder (Gravador de Voz)
-- Microsoft.DesktopAppInstaller (Instalador de aplicativos em pacotes .appx e .msix)
+- Microsoft.DesktopAppInstaller (Instalador de aplicativos em pacotes .appx e .msix / winget)
 - Microsoft.WindowsCamera (Aplicativo de câmera padrão)
 - NVIDIACorp.NVIDIAControlPanel (Painel de controle da NVIDIA)
 - Microsoft.Paint (Editor de imagens básico - Paint)
 - Microsoft.MicrosoftEdge.Stable (Navegador Microsoft Edge)
-- Microsoft.Notepad (Bloco de Notas)
+- Microsoft.WindowsNotepad (Bloco de Notas)
 - Microsoft.XboxIdentityProvider (Gerencia a conta Xbox nos aplicativos e jogos)
-- Microsoft.ZuneMusic (Reprodutor de música - Groove Music)
 - MicrosoftCorporationII.QuickAssist (Assistência rápida para suporte remoto)
 - WinRAR.ShellExtension (Extensão do WinRAR para gerenciar arquivos compactados)
 - Microsoft.WindowsTerminal (Terminal moderno e avançado do Windows)
-- Microsoft.GetHelp (Essencial para diagnóstico e suporte do Windows)
-- Microsoft.VP9VideoExtensions (Extensão para reprodução de vídeos em formato VP9)
-- Microsoft.HEVCVideoExtension (Extensão para reprodução de vídeos em formato HEVC)
-- Microsoft.WebMediaExtensions (Extensão para reprodução de formatos multimídia na web)
 
 Aqui está a versão simplificada e otimizada apenas para desinstalar os aplicativos não desejados via powershell:
 ```
-[regex]$WhitelistedApps='Microsoft.WindowsStore|Microsoft.GetHelp|Microsoft.Windows.Photos|Microsoft.WindowsCalculator|Microsoft.ScreenSketch|Microsoft.WindowsSoundRecorder|Microsoft.DesktopAppInstaller|Microsoft.WindowsCamera|NVIDIACorp.NVIDIAControlPanel|Microsoft.Paint|Microsoft.MicrosoftEdge.Stable|Microsoft.WindowsNotepad|Microsoft.XboxIdentityProvider|Microsoft.ZuneMusic|MicrosoftCorporationII.QuickAssist|WinRAR.ShellExtension|Microsoft.WindowsTerminal|Microsoft.VP9VideoExtensions|Microsoft.HEVCVideoExtension|Microsoft.WebMediaExtensions'; Get-AppxPackage -AllUsers | Where-Object {$_.Name -NotMatch $WhitelistedApps} | ForEach-Object { Remove-AppxPackage -Package $_.PackageFullName -ErrorAction SilentlyContinue }; Get-AppxProvisionedPackage -Online | Where-Object {$_.PackageName -NotMatch $WhitelistedApps} | ForEach-Object { Remove-AppxProvisionedPackage -Online -PackageName $_.PackageName -ErrorAction SilentlyContinue }
-
+[regex]$WhitelistedApps='Microsoft.WindowsStore|Microsoft.Windows.Photos|Microsoft.WindowsCalculator|Microsoft.ScreenSketch|Microsoft.DesktopAppInstaller|Microsoft.WindowsCamera|NVIDIACorp.NVIDIAControlPanel|Microsoft.Paint|Microsoft.MicrosoftEdge.Stable|Microsoft.WindowsNotepad|Microsoft.XboxIdentityProvider|MicrosoftCorporationII.QuickAssist|WinRAR.ShellExtension|Microsoft.WindowsTerminal'; Get-AppxPackage -AllUsers | Where-Object {$_.Name -NotMatch $WhitelistedApps -and $_.NonRemovable -ne $true} | ForEach-Object { Remove-AppxPackage -Package $_.PackageFullName -ErrorAction SilentlyContinue }; Get-AppxProvisionedPackage -Online | Where-Object {$_.PackageName -NotMatch $WhitelistedApps} | ForEach-Object { Remove-AppxProvisionedPackage -Online -PackageName $_.PackageName -ErrorAction SilentlyContinue }
 ```
 
 
@@ -105,7 +97,7 @@ Botão "Desinstalar OneDrive":
 
 - Inicia a desinstalação do aplicativo OneDrive.
 - Move os arquivos do OneDrive para uma pasta chamada "OneDriveBackupFiles" na área de trabalho.
-- Habilita a política de grupo "Impedir o uso do OneDrive para Armazenamento de Arquivos".
+- Habilita a política de grupo "Impedir o uso do OneDrive para Armazenamento de Arquivos" (sempre, com ou sem arquivos).
 - Desinstala o OneDrive e remove arquivos restantes.
 - Remove o OneDrive do Windows Explorer.
 - Reinicia o Explorer.
@@ -130,13 +122,22 @@ Além disso, o script também executa a ferramenta de limpeza de disco do Window
 ### Ativar modo de Desempenho
 Botão "Ativar modo de Desempenho":
 
+- **Desativar Compressão de Memória**: A memória RAM não é comprimida.
+- **Desativar Hibernação**: Libera espaço em disco (arquivo hiberfil.sys).
 - **Instalar WinRAR**: Garante o software para compactação/descompactação de arquivos.
-- **Configurações de Energia**: Coloca o modo de energia em Desempenho.
 - **Ativar Sensor de Armazenamento**: Gerencia automaticamente o espaço em disco.
 - **Histórico de Área de Transferência**: Acesso a itens copiados anteriormente. (_Win+V_)
-- **Personalização da Barra de Tarefas**: Mais ícones na barra de tarefas e menos recentes.
-- **Modo de Desempenho Máximo de Energia**: Adiciona 'Desempenho Máximo' no modo de energia.
-- **Desativar Busca na Web**: Desativa a busca na Web no menu iniciar.
+- **Personalização da Barra de Tarefas**: Oculta a barra de pesquisa, a Visão de Tarefas, Widgets e Chat. Ativa "Finalizar tarefa" no botão direito.
+- **Desativar Prefetch e SysMain**: Otimizado para SSD.
+- **Busca do Windows em Manual**: O serviço de indexação só roda quando você pesquisa.
+- **Edge não abre sozinho**: Remove o Edge da inicialização e desativa a "Aceleração de inicialização".
+- **Desativar Precisão do Mouse**: Remove a aceleração do mouse (mira mais precisa em jogos).
+- **Desativar Gravação do Game Bar**: Desliga a gravação em segundo plano dos jogos.
+- **DNS Rápido**: Troca o DNS das placas de rede conectadas para Cloudflare (1.1.1.1) + Google (8.8.8.8).
+- **Desativar Sugestões e Anúncios**: Remove sugestões de apps e anúncios na tela de bloqueio.
+- **Modo de Desempenho Máximo de Energia**: Adiciona 'Desempenho Máximo' no modo de energia, mas **não ativa**. Para ativar, vá em Opções de Energia.
+- **Desativar Busca na Web**: Desativa a busca na Web (Bing) no menu iniciar. Funciona no Windows 10 e 11.
+- **Caminhos Longos**: Aumenta o limite de tamanho para endereços de diretórios.
 - **Ativar Modo Escuro**: Reduz a fadiga ocular e economiza energia.
 
 
@@ -144,7 +145,15 @@ Botão "Ativar modo de Desempenho":
 ### Desativar Telemetry
 Botão "Desativar Telemetry":
 
-- Desativa o serviço de Telemetry do Windows, que coleta dados do sistema para a Microsoft.
+- Desativa o serviço de Telemetry do Windows (DiagTrack), que coleta dados do sistema para a Microsoft.
+- Desativa a coleta de dados (AllowTelemetry = 0), criando a chave se ela não existir.
+- Desativa o ID de anúncio.
+- Desativa o programa de experiência de comentários do Windows.
+- Impede que aplicativos bloatware retornem e remove sugestões do Menu Iniciar.
+- Desativa o rastreamento de localização.
+- Desativa o serviço WAP Push.
+- Desativa o Histórico de atividades (lista do que você abre no PC).
+- Desativa o Copilot.
 
 ---
 ### Instalação
@@ -175,7 +184,9 @@ Uma vez que o PowerShell é aberto como administrador, você pode executar o com
 3. **`New-Object System.Net.WebClient`**: Cria um objeto especial que permite baixar e enviar informações para a internet.  
   Nesse caso baixar o script.
 
-4. **`.DownloadData('https://bit.ly/WinDebloater')`**: Baixa informações de um site específico, neste caso, o arquivo localizado em 'https://bit.ly/WinDebloater'.
+4. **`.DownloadData('https://raw.githubusercontent.com/...')`**: Baixa informações de um site específico, neste caso, o arquivo `WindowsDebloater.ps1` direto deste repositório do GitHub.
+
+Se o PowerShell não estiver como administrador, o script pede permissão e se abre de novo como administrador sozinho.
 
 Resumindo, esse comando baixa um arquivo da internet e o transforma em informações compreensíveis. Depois, executa essas informações como um conjunto de ações no seu computador. É importante ter cuidado ao executar comandos desconhecidos, pois eles podem afetar o funcionamento do seu computador. Certifique-se de entender a origem e o propósito do comando antes de executá-lo.
 
