@@ -182,7 +182,7 @@ $Button2.Add_Click( {
         # Roda nos dois casos (com ou sem arquivos)
         Write-Host "Habilitando a Política de Grupo 'Impedir o uso do OneDrive para Armazenamento de Arquivos'." -ForegroundColor Green
         $OneDriveKey = 'HKLM:\Software\Policies\Microsoft\Windows\OneDrive'
-        New-Item -Path $OneDriveKey -Force | Out-Null
+        if (!(Test-Path $OneDriveKey)) { New-Item -Path $OneDriveKey -Force | Out-Null }
         Set-ItemProperty -Path $OneDriveKey -Name DisableFileSyncNGSC -Value 1 -Type DWord
 
         Write-Host "Desinstalando o OneDrive. Por favor, aguarde..." -ForegroundColor Green
@@ -298,7 +298,7 @@ $Button4.Add_Click( {
 
         Write-Host "Ativar o Sensor de Armazenamento" -ForegroundColor Cyan
         $StoragePolicy = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy"
-        New-Item -Path $StoragePolicy -Force | Out-Null
+        if (!(Test-Path $StoragePolicy)) { New-Item -Path $StoragePolicy -Force | Out-Null }
         New-ItemProperty -Path $StoragePolicy -Name "01" -Value 1 -PropertyType DWORD -Force | Out-Null
 
         Write-Host "Ativar histórico de area de transferência" -ForegroundColor Cyan
@@ -326,7 +326,7 @@ $Button4.Add_Click( {
             Remove-ItemProperty -Path $RunKey -Name $_ -ErrorAction SilentlyContinue
         }
         $EdgeKey = "HKLM:\SOFTWARE\Policies\Microsoft\Edge"
-        New-Item -Path $EdgeKey -Force | Out-Null
+        if (!(Test-Path $EdgeKey)) { New-Item -Path $EdgeKey -Force | Out-Null }
         Set-ItemProperty -Path $EdgeKey -Name StartupBoostEnabled -Value 0 -Type DWord
 
         Write-Host "Desativando a precisão do mouse (aceleração)" -ForegroundColor Cyan
@@ -335,9 +335,9 @@ $Button4.Add_Click( {
         Set-ItemProperty -Path "HKCU:\Control Panel\Mouse" -Name MouseThreshold2 -Value "0"
 
         Write-Host "Desativando a gravação do Game Bar" -ForegroundColor Cyan
-        New-Item -Path "HKCU:\System\GameConfigStore" -Force | Out-Null
+        if (!(Test-Path "HKCU:\System\GameConfigStore")) { New-Item -Path "HKCU:\System\GameConfigStore" -Force | Out-Null }
         Set-ItemProperty -Path "HKCU:\System\GameConfigStore" -Name GameDVR_Enabled -Value 0 -Type DWord
-        New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\GameDVR" -Force | Out-Null
+        if (!(Test-Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\GameDVR")) { New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\GameDVR" -Force | Out-Null }
         Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\GameDVR" -Name AppCaptureEnabled -Value 0 -Type DWord
 
         Write-Host "Trocando o DNS para Cloudflare (1.1.1.1) + Google (8.8.8.8)" -ForegroundColor Cyan
@@ -357,7 +357,7 @@ $Button4.Add_Click( {
         Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager" -Name "SubscribedContent-338388Enabled" -Value 0 -Type DWord
 
         Write-Host "Ativar Finalizar tarefa na barra de tarefas" -ForegroundColor Cyan
-        New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarDeveloperSettings" -Force | Out-Null
+        if (!(Test-Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarDeveloperSettings")) { New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarDeveloperSettings" -Force | Out-Null }
         New-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarDeveloperSettings" -Name "TaskbarEndTask" -Value 1 -PropertyType DWORD -Force
 
         Write-Host "Obter atualizações assim que disponiveis" -ForegroundColor Cyan
@@ -386,8 +386,8 @@ $Button4.Add_Click( {
         $ExplorerKeyPath = "HKCU:\Software\Policies\Microsoft\Windows\Explorer"
 
         # Cria as chaves se não existirem
-        New-Item -Path $SearchKeyPath -Force | Out-Null
-        New-Item -Path $ExplorerKeyPath -Force | Out-Null
+        if (!(Test-Path $SearchKeyPath)) { New-Item -Path $SearchKeyPath -Force | Out-Null }
+        if (!(Test-Path $ExplorerKeyPath)) { New-Item -Path $ExplorerKeyPath -Force | Out-Null }
 
         # -Force cria o valor ou sobrescreve se já existir
         New-ItemProperty -Path $SearchKeyPath -Name BingSearchEnabled -PropertyType DWord -Value 0 -Force | Out-Null
@@ -423,7 +423,7 @@ $Button5.Add_Click( {
         Write-Host "Desativando o programa de experiência de comentários do Windows" -ForegroundColor Green
         # Cria a chave se não existir e desliga o ID de anúncio
         foreach ($Advertising in @("HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo", "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\AdvertisingInfo")) {
-            New-Item -Path $Advertising -Force | Out-Null
+            if (!(Test-Path $Advertising)) { New-Item -Path $Advertising -Force | Out-Null }
             Set-ItemProperty -Path $Advertising -Name Enabled -Value 0 -Type DWord
         }
 
@@ -468,7 +468,7 @@ $Button5.Add_Click( {
         $DataCollection3 = "HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Policies\DataCollection"    
         # Cria a chave se não existir e depois define o valor
         foreach ($DataCollection in @($DataCollection1, $DataCollection2, $DataCollection3)) {
-            New-Item -Path $DataCollection -Force | Out-Null
+            if (!(Test-Path $DataCollection)) { New-Item -Path $DataCollection -Force | Out-Null }
             Set-ItemProperty -Path $DataCollection -Name AllowTelemetry -Value 0 -Type DWord
         }
 
@@ -498,7 +498,7 @@ $Button5.Add_Click( {
         #Desativa o Histórico de atividades (lista do que você abre no PC)
         Write-Host "Desativando o Histórico de atividades" -ForegroundColor Green
         $ActivityKey = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\System"
-        New-Item -Path $ActivityKey -Force | Out-Null
+        if (!(Test-Path $ActivityKey)) { New-Item -Path $ActivityKey -Force | Out-Null }
         Set-ItemProperty -Path $ActivityKey -Name EnableActivityFeed -Value 0 -Type DWord
         Set-ItemProperty -Path $ActivityKey -Name PublishUserActivities -Value 0 -Type DWord
         Set-ItemProperty -Path $ActivityKey -Name UploadUserActivities -Value 0 -Type DWord
@@ -506,7 +506,7 @@ $Button5.Add_Click( {
         #Desativa o Copilot
         Write-Host "Desativando o Copilot" -ForegroundColor Green
         $CopilotKey = "HKCU:\Software\Policies\Microsoft\Windows\WindowsCopilot"
-        New-Item -Path $CopilotKey -Force | Out-Null
+        if (!(Test-Path $CopilotKey)) { New-Item -Path $CopilotKey -Force | Out-Null }
         Set-ItemProperty -Path $CopilotKey -Name TurnOffWindowsCopilot -Value 1 -Type DWord
         Set-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced" -Name ShowCopilotButton -Value 0 -Type DWord
 

@@ -26,6 +26,8 @@
   * [Limpar pastas Temporárias](#limpar-pastas-temporárias)
   * [Ativar modo de Desempenho](#ativar-modo-de-desempenho)
   * [Desativar Telemetry](#desativar-telemetry)
+* [Instalação](#instalação)
+* [Instalar o Windows já otimizado (autounattend.xml)](#instalar-o-windows-já-otimizado-autounattendxml)
 * [Licença](#licença)
 * [Autores](#autores)
 
@@ -116,7 +118,7 @@ e remove os arquivos nelas contidos de forma recursiva e forçada.
 
 Esteja ciente de que a limpeza de algumas pastas, como a pasta "C:\Windows\Prefetch" e a pasta "C:\Windows\SoftwareDistribution\Download", pode afetar o desempenho do sistema ou a capacidade de instalar atualizações futuras **se feita com frequência** o que é recomendado apenas após formatação.
 
-Além disso, o script também executa a ferramenta de limpeza de disco do Windows (cleanmgr /sagerun:1) e exibe mensagens informativas durante o processo.
+Além disso, o script também marca o que limpar e inicia a ferramenta de limpeza de disco do Windows (cleanmgr /sagerun:1) em segundo plano, sem prender o script. A pasta Downloads não é tocada.
 
 ##
 ### Ativar modo de Desempenho
@@ -191,6 +193,51 @@ Se o PowerShell não estiver como administrador, o script pede permissão e se a
 Resumindo, esse comando baixa um arquivo da internet e o transforma em informações compreensíveis. Depois, executa essas informações como um conjunto de ações no seu computador. É importante ter cuidado ao executar comandos desconhecidos, pois eles podem afetar o funcionamento do seu computador. Certifique-se de entender a origem e o propósito do comando antes de executá-lo.
 
 </details>
+
+---
+## Instalar o Windows já otimizado (autounattend.xml)
+
+O arquivo [`autounattend.xml`](autounattend.xml) faz a instalação do Windows 11 já limpa e otimizada, com os mesmos ajustes do script. Assim você não precisa rodar o WindowsDebloater depois de formatar.
+
+Ele foi feito no gerador [schneegans.de/windows/unattend-generator](https://schneegans.de/windows/unattend-generator/).
+
+### Como usar
+
+1. Crie um pendrive de instalação do Windows 11 (ex: com a [Ferramenta de Criação de Mídia](https://www.microsoft.com/pt-br/software-download/windows11) ou o [Rufus](https://rufus.ie/pt_BR/)).
+2. Copie o `autounattend.xml` para a **raiz** do pendrive (junto da pasta `sources`). O nome tem que ser exatamente `autounattend.xml`.
+3. Ligue o PC pelo pendrive. A instalação lê o arquivo sozinha.
+4. Na tela de discos, **escolha você mesmo** onde instalar. O arquivo não apaga nenhum disco sozinho.
+5. Na configuração inicial, crie sua conta local (nome e senha).
+6. No primeiro login, espere os scripts terminarem (alguns minutos). O WinRAR é instalado nessa hora, precisa de internet.
+
+### O que ele já faz
+
+| Parte | O que faz |
+|---|---|
+| Instalação | Windows 11 Pro em pt-BR, teclado ABNT2, pula a checagem de TPM/Secure Boot e a exigência de internet |
+| Conta | Conta local, sem conta Microsoft, senha sem expirar |
+| Apps | Mesma lista branca do botão "Desinstalar APPS" (mais Segurança do Windows, idioma pt-BR e bibliotecas que o Terminal, o WinRAR e o `winget` usam) |
+| OneDrive | Desinstalado e bloqueado |
+| Telemetria | DiagTrack, AllowTelemetry, ID de anúncio, localização, histórico de atividades e Copilot desligados |
+| Desempenho | Mesmo botão "Ativar modo de Desempenho": SysMain, Prefetch, Busca em manual, Edge fora do boot, mouse, Game Bar, DNS Cloudflare + Google, hibernação |
+| Desempenho Máximo | Plano criado, mas **não ativado** |
+| WinRAR | Instalado pelo `winget` no primeiro login. Se falhar (sem internet), tenta de novo no próximo login |
+| Visual | Modo escuro, Explorador abre em "Este Computador", "Finalizar tarefa" no botão direito, caminhos longos |
+| Outros | Área de Trabalho Remota ligada, sem restauração do sistema, sem criptografia automática do disco, Inicialização Rápida desligada, pasta `Windows.old` apagada |
+
+A chave de produto dentro do arquivo é a chave **genérica** do Windows Pro, só para instalar. A ativação vem da licença digital do seu PC.
+
+> ⚠️ A Área de Trabalho Remota fica ligada. Se você não usa, desligue em Configurações → Sistema → Área de Trabalho Remota.
+
+### Como editar
+
+O site lê as suas escolhas pelo link grande no topo do arquivo (o comentário `https://schneegans.de/...`). Para mudar algo:
+
+1. Abra o [gerador](https://schneegans.de/windows/unattend-generator/) e clique em **Import** (ou abra o link do topo do arquivo).
+2. Mude o que quiser e gere um novo `autounattend.xml`.
+3. Troque o arquivo do repositório pelo novo.
+
+**Não edite os scripts direto dentro do XML.** O site não lê os scripts, só o link do topo. Se você editar só os scripts, as mudanças somem ao reimportar no site. Edite sempre pelo site, nos campos de script.
 
 ---
 ## Licença:
