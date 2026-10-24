@@ -228,7 +228,7 @@ $Button2.Add_Click( {
         Start-Process explorer.exe -NoNewWindow
         Write-Host "O OneDrive foi desinstalado com sucesso!" -ForegroundColor Yellow
         
-        Remove-item env:OneDrive
+        Remove-item env:OneDrive -ErrorAction SilentlyContinue
 
         Write-Host "`n`n=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#=#`n`n"
     }
@@ -261,7 +261,15 @@ $Button3.Add_Click( {
         write-Host " "
 
         write-Host "`nExecutando a ferramenta de limpeza de disco do Windows" -ForegroundColor Cyan
-        cleanmgr /sagerun:1 | out-Null
+        # Marca o que limpar (perfil 1). Sem isso, o /sagerun:1 trava esperando.
+        # A pasta Downloads fica de fora para não apagar seus arquivos.
+        $VolumeCaches = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\VolumeCaches"
+        Get-ChildItem $VolumeCaches | Where-Object { $_.PSChildName -ne "DownloadsFolder" } | ForEach-Object {
+            New-ItemProperty -Path $_.PSPath -Name StateFlags0001 -Value 2 -PropertyType DWord -Force -ErrorAction SilentlyContinue | Out-Null
+        }
+        # Roda em segundo plano: no Sandbox o cleanmgr não fechava e o script ficava preso
+        Start-Process cleanmgr.exe -ArgumentList "/sagerun:1"
+        write-Host "A limpeza de disco continua rodando sozinha em segundo plano." -ForegroundColor Green
 
         Start-Sleep 3
         write-Host "Limpeza de arquivos temporários feita!" -ForegroundColor Yellow 
@@ -289,7 +297,9 @@ $Button4.Add_Click( {
         winget install --id RARLab.WinRar --silent --accept-package-agreements --accept-source-agreements
 
         Write-Host "Ativar o Sensor de Armazenamento" -ForegroundColor Cyan
-        New-ItemProperty -Path "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy" -Name "01" -Value 1 -PropertyType DWORD -Force
+        $StoragePolicy = "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy"
+        New-Item -Path $StoragePolicy -Force | Out-Null
+        New-ItemProperty -Path $StoragePolicy -Name "01" -Value 1 -PropertyType DWORD -Force | Out-Null
 
         Write-Host "Ativar histórico de area de transferência" -ForegroundColor Cyan
         Set-ItemProperty -Path "HKCU:\Software\Microsoft\Clipboard" -Name "EnableClipboardHistory" -Value 1 -Type DWord
